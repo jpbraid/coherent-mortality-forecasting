@@ -5,7 +5,7 @@ library(demography)
 mortality_data <- read_csv("S:/Agencies/ALT/ALT/ALT2015-17/jesse/4_mortality_improvement/output/qx_all_interpolated_M.csv") %>% 
   mutate(gender = "M") %>% 
   rbind(read_csv("S:/Agencies/ALT/ALT/ALT2015-17/jesse/4_mortality_improvement/output/qx_all_interpolated_F.csv") %>% 
-          mutate(gender = "F")) %>% 
+        mutate(gender = "F")) %>% 
   gather(key = "year", value = "q_x", -c(age, gender)) %>%
   mutate(q_x_shift = lag(q_x, default = 0),
          m_x = ifelse(age == 0, q_x, q_x/(1 - (1/12)*(q_x_shift/(1 - q_x_shift)) - (5/12)*q_x))) %>% 
