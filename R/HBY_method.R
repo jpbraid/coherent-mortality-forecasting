@@ -23,7 +23,7 @@ convert_to_qx <- function(mx) {
   qx
 }
 
-# set up params
+# set up params for analysis
 max_age <- 120
 min_analysis_year <- 1961
 max_analysis_year <- 2016
