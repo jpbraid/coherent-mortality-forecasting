@@ -5,7 +5,7 @@ library(demography)
 mortality_data <- read_csv("S:/Agencies/ALT/ALT/ALT2015-17/jesse/4_mortality_improvement/output/qx_all_interpolated_M.csv") %>% 
   mutate(gender = "M") %>% 
   rbind(read_csv("S:/Agencies/ALT/ALT/ALT2015-17/jesse/4_mortality_improvement/output/qx_all_interpolated_F.csv") %>% 
-  mutate(gender = "F")) %>% 
+          mutate(gender = "F")) %>% 
   gather(key = "year", value = "q_x", -c(age, gender)) %>%
   mutate(q_x_shift = lag(q_x, default = 0),
          m_x = ifelse(age == 0, q_x, q_x/(1 - (1/12)*(q_x_shift/(1 - q_x_shift)) - (5/12)*q_x))) %>% 
@@ -25,8 +25,8 @@ convert_to_qx <- function(mx) {
 
 # set up params for analysis
 max_age <- 120
-min_analysis_year <- 1961
-max_analysis_year <- 2016
+min_year <- 1961
+max_year <- 2016
 
 # select the relevant subset of the mortality data
 mortality_data_subset <- mortality_data %>% filter(age %in% 0:max_age, year %in% min_analysis_year:max_year)
@@ -52,11 +52,12 @@ mortality_matrix_F <- mortality_data_subset %>%
 aus_mx <- read.demogdata("S:/Agencies/ALT/ALT/ALT2015-17/jesse/4_mortality_improvement/Mx_1x1.txt", 
                          "S:/Agencies/ALT/ALT/ALT2015-17/jesse/4_mortality_improvement/Exposures_1x1.txt", 
                          type = "mortality", label = sprintf("Australia_%s_%s", min_analysis_year, max_year))
-names(aus_mx$rate) <- c("Female", "Male")
+aus_mx$label <- paste0("Australia_", min_year, "_", max_year)
 aus_mx$rate <- list(Female = mortality_matrix_F, Male = mortality_matrix_M)
+names(aus_mx$rate) <- c("Female", "Male")
 aus_mx$pop <- list(Female = matrix(10000, nrow = max_age + 1, ncol = length(unique(mortality_data_subset$year))), 
                    Male = matrix(10000, nrow = max_age + 1, ncol = length(unique(mortality_data_subset$year))))
-aus_mx$year <- min_analysis_year:max_year
+aus_mx$year <- min_year:max_year
 aus_mx$age <- 0:max_age
 
 # now fit fPCA / time series models to the smoothed mortality rates, and project forward
@@ -109,26 +110,24 @@ for (max_year in seq(from = max_analysis_year - 15, to = max_analysis_year, by =
                            K = 100, drange = c(0, 0.5))
   
   # for gender in c("M", "F") [i'm ok with doing two separate mortality data matrices]
-    qx_forecast <- HBY_forecast$Male$rate$Male %>% apply(2, convert_to_qx) #%>% write.csv("male_forecasts.csv")
-
-    # calculate year-on-year improvement factors
-    indices <- 2:ncol(qx_forecast)
-    qx_forecast_shifted <- cbind(qx_forecast[, indices], 0)
-    yearly_improvement <- qx_forecast_shifted/qx_forecast - 1
+  qx_forecast <- HBY_forecast$Male$rate$Male %>% apply(2, convert_to_qx) #%>% write.csv("male_forecasts.csv")
   
-    # calculate 25 and 125 year improvement factors
-    # NOTE: this assumes columns are sorted by increasing year, gap is 1, etc.
-    MI_25 <- (qx_forecast[, 25]/mortality_matrix_M[, ncol(mortality_matrix_M)])^(1/25) - 1
-    MI_25_df <- as.data.frame(cbind(gender = "M", start_year = min_analysis_year, end_year = max_year, 
-                               age = 0:max_age, improvement_range = 25, MI = MI_25))
-    MI_125 <- (qx_forecast[, 125]/mortality_matrix_M[, ncol(mortality_matrix_M)])^(1/125) - 1
-    MI_125_df <- as.data.frame(cbind(gender = "M", start_year = min_analysis_year, end_year = max_year, 
+  # calculate year-on-year improvement factors
+  indices <- 2:ncol(qx_forecast)
+  qx_forecast_shifted <- cbind(qx_forecast[, indices], 0)
+  yearly_improvement <- qx_forecast_shifted/qx_forecast - 1
+  
+  # calculate 25 and 125 year improvement factors
+  # NOTE: this assumes columns are sorted by increasing year, gap is 1, etc.
+  MI_25 <- (qx_forecast[, 25]/mortality_matrix_M[, ncol(mortality_matrix_M)])^(1/25) - 1
+  MI_25_df <- as.data.frame(cbind(gender = "M", start_year = min_analysis_year, end_year = max_year, 
+                                  age = 0:max_age, improvement_range = 25, MI = MI_25))
+  MI_125 <- (qx_forecast[, 125]/mortality_matrix_M[, ncol(mortality_matrix_M)])^(1/125) - 1
+  MI_125_df <- as.data.frame(cbind(gender = "M", start_year = min_analysis_year, end_year = max_year, 
                                    age = 0:max_age, improvement_range = 125, MI = MI_125))
-    
-    MI <- rbind(MI, MI_25_df, MI_125_df)
+  
+  MI <- rbind(MI, MI_25_df, MI_125_df)
 }
 
 MI <- MI %>% filter(complete.cases(MI))
 rownames(MI) <- NULL
-
-
