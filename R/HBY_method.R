@@ -29,7 +29,7 @@ min_year <- 1961
 max_year <- 2016
 
 # select the relevant subset of the mortality data
-mortality_data_subset <- mortality_data %>% filter(age %in% 0:max_age, year %in% min_analysis_year:max_year)
+mortality_data_subset <- mortality_data %>% filter(age %in% 0:max_age, year %in% min_year:max_year)
 
 # the demogdata object wants matrices, not data frames, so...
 mortality_matrix_M <- mortality_data_subset %>% 
@@ -51,7 +51,7 @@ mortality_matrix_F <- mortality_data_subset %>%
 # create the demogdata object from smoothed mortality rates
 aus_mx <- read.demogdata("S:/Agencies/ALT/ALT/ALT2015-17/jesse/4_mortality_improvement/Mx_1x1.txt", 
                          "S:/Agencies/ALT/ALT/ALT2015-17/jesse/4_mortality_improvement/Exposures_1x1.txt", 
-                         type = "mortality", label = sprintf("Australia_%s_%s", min_analysis_year, max_year))
+                          type = "mortality", label = sprintf("Australia_%s_%s", min_year, max_year))
 aus_mx$label <- paste0("Australia_", min_year, "_", max_year)
 aus_mx$rate <- list(Female = mortality_matrix_F, Male = mortality_matrix_M)
 names(aus_mx$rate) <- c("Female", "Male")
@@ -59,6 +59,7 @@ aus_mx$pop <- list(Female = matrix(10000, nrow = max_age + 1, ncol = length(uniq
                    Male = matrix(10000, nrow = max_age + 1, ncol = length(unique(mortality_data_subset$year))))
 aus_mx$year <- min_year:max_year
 aus_mx$age <- 0:max_age
+aus_mx$lambda <- 0
 
 # now fit fPCA / time series models to the smoothed mortality rates, and project forward
 HBY_fit <- coherentfdm(aus_mx)
